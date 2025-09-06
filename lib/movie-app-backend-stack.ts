@@ -7,7 +7,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as path from 'path';
 
 export class MovieAppBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -88,15 +87,41 @@ export class MovieAppBackendStack extends cdk.Stack {
       },
     });
 
+    const deleteMovieLambda = new lambda.Function(this, 'DeleteMovieLambda', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'deleteMovie.handler',
+      code: lambda.Code.fromAsset('lambdas'),
+      role: lambdaRole,
+      environment: {
+        TABLE_NAME: moviesTable.tableName,
+        BUCKET_NAME: uploadsBucket.bucketName,
+      },
+    });
+
     // API Gateway
     const api = new apigateway.RestApi(this, 'MovieAppApi', {
       restApiName: 'Movie App API',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: [
+          'Content-Type',
+          'X-Amz-Date',
+          'Authorization',
+          'X-Api-Key',
+          'X-Amz-Security-Token',
+          'X-Amz-User-Agent'
+        ],
+      },
     });
 
-    api.root.addResource('upload-urls').addMethod('POST', new apigateway.LambdaIntegration(getUploadUrlsLambda));
+    const uploadUrlsResource = api.root.addResource('upload-urls');
+    uploadUrlsResource.addMethod('POST', new apigateway.LambdaIntegration(getUploadUrlsLambda));
+    
     const moviesResource = api.root.addResource('movies');
     moviesResource.addMethod('POST', new apigateway.LambdaIntegration(saveMovieLambda));
     moviesResource.addMethod('GET', new apigateway.LambdaIntegration(getMoviesLambda));
+    moviesResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteMovieLambda));
 
     // Outputs
     new cdk.CfnOutput(this, 'CloudFrontURL', { value: distribution.domainName });

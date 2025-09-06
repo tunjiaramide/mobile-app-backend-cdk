@@ -5,6 +5,7 @@ const db = new DynamoDBClient({ region: process.env.AWS_REGION });
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN;
 
 export const handler = async () => {
+  
   const data = await db.send(new ScanCommand({ TableName: process.env.TABLE_NAME }));
   const movies = data.Items?.map(item => ({
     id: item.id.S,
@@ -17,6 +18,12 @@ export const handler = async () => {
 
   return {
     statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(movies),
   };
 };

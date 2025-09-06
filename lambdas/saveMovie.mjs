@@ -4,6 +4,19 @@ import { v4 as uuidv4 } from "uuid";
 const db = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 export const handler = async (event) => {
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+      body: '',
+    };
+  }
+
   const body = JSON.parse(event.body || "{}");
 
   const id = uuidv4();
@@ -22,6 +35,12 @@ export const handler = async (event) => {
 
   return {
     statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ message: "Movie added successfully" }),
   };
 };
